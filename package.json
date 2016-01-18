@@ -1,0 +1,42 @@
+{
+  "name": "koa-robots-logger",
+  "version": "0.0.1",
+  "description": "koa-robots-logger",
+  "author": "寒飞紫",
+  "license": "MIT",
+  "engines": {
+    "node": ">=4.2.3"
+  },
+  "main": "./dist/index",
+  "dependencies": {
+    "co": "^4.6.0",
+    "co-mkdirp": "^0.1.0",
+    "log4js": "^0.6.29"
+  },
+  "devDependencies": {
+    "babel-core": "^6.4.0",
+    "babel-plugin-transform-es2015-destructuring": "^6.4.0",
+    "babel-plugin-transform-es2015-modules-commonjs": "^6.3.16",
+    "babel-plugin-transform-es2015-parameters": "^6.3.13",
+    "babel-plugin-transform-es2015-spread": "^6.4.0",
+    "koa": "^1.1.2",
+    "supertest": "1.1.0"
+  },
+  "babel": {
+    "plugins": [
+      "transform-es2015-spread",
+      "transform-es2015-parameters",
+      "transform-es2015-destructuring",
+      "transform-es2015-modules-commonjs"
+    ]
+  },
+  "scripts": {
+    "compile": "babel src -d dist",
+    "prepublish": "npm run compile",
+    "test": "npm run compile && mocha --reporter spec --require should --compilers js:babel-core/register"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/koa-robots/koa-robots-logger.git"
+  }
+}
