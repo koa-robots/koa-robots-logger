@@ -1,41 +1,32 @@
-import co from 'co'
-import _log4js from 'log4js'
-import mkdirp from 'co-mkdirp'
-import {join, basename} from 'path'
-
-let log4js = {
-    logger : null,
-    configure(options) {
-        _log4js.configure(options)
-        return this
-    },
-    getLogger(category) {
-        this.logger = _log4js.getLogger(category)
-        return this
-    },
-    setLevel(level) {
-        this.logger.setLevel(level)
-        return this
-    }
-}
+import log4js from 'log4js'
+import mkdirp from 'mkdirp'
+import {join, basename, normalize, resolve} from 'path'
 
 export default function(app, opts = {}){
-    app.context.logger = {}
+    let path, errorLog, accessLog
 
-    return co(function *(){
-        yield createLogFile('./logs', opts)
+    opts = clone(opts)
+    path = normalize(resolve('./logs'))
 
-        log4js.configure({
-            replaceConsole: !opts.enable,
-            appenders: opts.enable ? opts.appenders : [{type: 'console'}]
-        }).getLogger(opts.enable ? 'normal' : '').setLevel('INFO')
+    mkdirp.sync(path)
+    adjustFilename(path, opts)
+    log4js.configure(opts)
 
-        for (let item of ['trace', 'debug', 'info', 'warn', 'error', 'fatal']){
-            app.context.logger[item] = function(err){
-                log4js.logger[item].apply(log4js.logger, formatErrorMessage(this.url, err, getErrorInfo()))
-            }.bind(app.context)
-        }
-    })
+    errorLog = log4js.getLogger('error')
+    accessLog = log4js.getLogger('access')
+    errorLog.setLevel('INFO')
+    accessLog.setLevel('INFO')
+
+    app.context.logger = function(err){
+        errorLog.error.apply(errorLog, formatErrorMessage(this.url, err, getErrorInfo()))
+    }
+
+    return function *(next){
+        yield next
+
+        accessLog.info(this.ip, this.method, this.url, `${this.protocol.toUpperCase()}/${this.req.httpVersion}`,
+            this.status, this.length || null, this.get('referrer'), this.header['user-agent'])
+    }
 }
 
 function getErrorInfo(){
@@ -65,12 +56,14 @@ function formatErrorMessage(url, exception, errorInfo){
     return [url, `(${errorInfo.file}:${errorInfo.line}:${errorInfo.method})`, exception]
 }
 
-function *createLogFile(path, opts){
-    yield mkdirp(path = join(process.cwd(), './logs'))
-
-    opts.appenders.forEach((item) => {
+function adjustFilename(path, opts){
+    for(let item of opts.appenders){
         if(item.type === 'file'){
             item.filename = join(path, item.filename)
         }
-    })
+    }
+}
+
+function clone(obj){
+    return JSON.parse(JSON.stringify(obj))
 }
